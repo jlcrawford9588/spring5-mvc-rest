@@ -29,6 +29,8 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     public CustomerDTO getCustomerById(Long id) {
-        return customerMapper.toCustomerDTO(customerRepository.findById(id).get());
+        return customerRepository.findById(id)
+                .map(customerMapper::toCustomerDTO)
+                .orElseThrow(RuntimeException::new);  //TODO - JC: better exception handling
     }
 }
