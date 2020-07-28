@@ -1,5 +1,6 @@
 package guru.springfamework.controllers.v1;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import guru.springfamework.api.v1.model.CustomerDTO;
 import guru.springfamework.services.CustomerService;
 import org.hamcrest.Matchers;
@@ -11,13 +12,16 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.Arrays;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 public class CustomerControllerTest {
 
@@ -51,15 +55,15 @@ public class CustomerControllerTest {
         testCustomerDTO.setLastName(TEST_LAST_NAME_1);
 
         CustomerDTO testCustomerDTO2 = new CustomerDTO();
-        testCustomerDTO2.setFirstName(TEST_LAST_NAME_2);
+        testCustomerDTO2.setFirstName(TEST_FIRST_NAME_2);
         testCustomerDTO2.setLastName(TEST_LAST_NAME_2);
         when(customerService.getAllCustomers()).thenReturn(Arrays.asList(testCustomerDTO, testCustomerDTO2));
 
         //when then
         mockMvc.perform(
                 MockMvcRequestBuilders.get("/api/v1/customers").contentType(MediaType.APPLICATION_JSON))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.customers", Matchers.hasSize(2)));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.customers", Matchers.hasSize(2)));
     }
 
     @Test
@@ -74,8 +78,41 @@ public class CustomerControllerTest {
         //when then
         mockMvc.perform(
                 MockMvcRequestBuilders.get("/api/v1/customers/22").contentType(MediaType.APPLICATION_JSON))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.firstName", Matchers.equalTo(TEST_FIRST_NAME_1)))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.lastName", Matchers.equalTo(TEST_LAST_NAME_1)));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstName", Matchers.equalTo(TEST_FIRST_NAME_1)))
+                .andExpect(jsonPath("$.lastName", Matchers.equalTo(TEST_LAST_NAME_1)));
+    }
+
+    @Test
+    public void createCustomer() throws Exception {
+        //given
+        CustomerDTO customerDto = new CustomerDTO();
+        customerDto.setFirstName(TEST_FIRST_NAME_1);
+        customerDto.setLastName(TEST_LAST_NAME_1);
+
+        CustomerDTO returnDto = new CustomerDTO();
+        returnDto.setFirstName(customerDto.getFirstName());
+        returnDto.setLastName(customerDto.getLastName());
+        returnDto.setCustomerUrl("/api/v1/customers/1");
+
+        when(customerService.createNewCustomer(any(CustomerDTO.class))).thenReturn(returnDto);
+
+        //when then
+        mockMvc.perform(post("/api/v1/customers/")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJsonString(customerDto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.firstName", Matchers.equalTo(TEST_FIRST_NAME_1)))
+                .andExpect(jsonPath("$.customer_url", Matchers.equalTo("/api/v1/customers/1")));
+    }
+
+
+    private String asJsonString(Object object) {
+        try {
+            return new ObjectMapper().writeValueAsString(object);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
     }
 }
